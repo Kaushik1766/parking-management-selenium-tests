@@ -1,0 +1,4 @@
+.playwright-mcp/*
+.idea/*
+__pycache__/*
+**/*.pyc
