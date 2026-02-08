@@ -19,13 +19,20 @@ def clear_credentials(driver: WebDriver):
     driver.get(WEBSITE_URL)
 
 @pytest.mark.parametrize(
-    ("name", "email", "password", "expected_login_button"),
+    ("name", "email", "password", "expected_login_button", "expected_success"),
     [
-        ("valid email", "kaushik@a.com", "123", True),
-        ("invalid email", "kaushikacom", "123", False),
+        ("valid email", "kaushik@a.com", "123", True, True),
+        ("invalid email", "kaushikacom", "123", True, False),
     ],
 )
-def test_login(driver: WebDriver, name: str, email: str, password: str, expected_login_button: bool):
+def test_login(
+    driver: WebDriver,
+    name: str,
+    email: str,
+    password: str,
+    expected_login_button: bool,
+    expected_success: bool,
+):
     email_textbox = driver.find_element(By.ID, "email")
     email_textbox.send_keys(email)
     password_textbox = driver.find_element(By.ID, "password")
@@ -33,16 +40,26 @@ def test_login(driver: WebDriver, name: str, email: str, password: str, expected
 
     login_btn = driver.find_element(By.XPATH, "/html[1]/body[1]/app-root[1]/main[1]/app-login[1]/div[1]/div[2]/div[1]/form[1]/p-button[1]/button[1]")
 
-    # print(login_btn.is_enabled())
     assert login_btn.is_enabled() == expected_login_button
 
-    if expected_login_button:
-        login_btn.click()
+    if not expected_login_button:
+        return
+
+    start_url = driver.current_url
+    login_btn.click()
+
+    if expected_success:
         WebDriverWait(driver, 5).until(
             lambda d: d.current_url.startswith(f"{WEBSITE_URL}user")
         )
-        print(driver.current_url)
         assert driver.current_url.startswith(f"{WEBSITE_URL}user") is True
+    else:
+        # Wait for either an error toast or a URL change (but not a successful redirect)
+        WebDriverWait(driver, 3).until(
+            lambda d: d.current_url != start_url or d.find_elements(By.CLASS_NAME, "p-toast-message")
+        )
+        assert driver.current_url.startswith(f"{WEBSITE_URL}user") is False
+        assert driver.current_url.startswith(f"{WEBSITE_URL}admin") is False
 
 
 def test_admin_login(driver: WebDriver):
